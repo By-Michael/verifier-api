@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `apikey` ADD COLUMN `userId` VARCHAR(191) NULL;
+ALTER TABLE `ApiKey` ADD COLUMN `userId` VARCHAR(191) NULL;
 
 -- CreateTable
 CREATE TABLE `User` (

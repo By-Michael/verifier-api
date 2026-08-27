@@ -59,8 +59,26 @@ async function initializeRuntime(): Promise<void> {
         logger.info('Connected to database successfully');
 
         await initializeStatsCache();
-        await startWebhookQueueWorker();
-        await startNotificationQueueWorker();
+
+        // Webhooks/notifications need Redis (BullMQ) but core verification
+        // endpoints (/verify-*, /verify) don't. Previously these two calls
+        // threw when REDIS_URL was unset, which crashed the ENTIRE API on
+        // boot — including plain CBE/Telebirr/etc. verification, which has
+        // nothing to do with Redis. On a free-tier deploy with no Redis
+        // instance, that meant the whole service never came up (Render's
+        // edge then serves its own generic 502 page instead of anything
+        // from this app). Made non-fatal: log and continue without queue
+        // workers if Redis isn't configured.
+        try {
+            await startWebhookQueueWorker();
+            await startNotificationQueueWorker();
+        } catch (queueErr) {
+            logger.warn(
+                `Queue workers not started (webhooks/notifications disabled): ${
+                    queueErr instanceof Error ? queueErr.message : queueErr
+                }. Set REDIS_URL to enable them.`
+            );
+        }
 
         startupState.initializing = false;
         startupState.ready = true;

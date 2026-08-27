@@ -1,10 +1,40 @@
 services:
   - type: web
     name: verifier-api
-    env: node
-    buildCommand: pnpm install && pnpm build
-    startCommand: pnpm start
+    # IMPORTANT: must be Docker, not the native Node buildpack. The CBE
+    # legacy-receipt verification path falls back to Puppeteer/headless
+    # Chromium when CBE's direct PDF endpoint doesn't respond, and Chromium
+    # needs system libraries (libnss3, libatk, etc.) that only get
+    # installed by this repo's Dockerfile — env: node skips it entirely,
+    # Puppeteer then fails to launch, and the request crashes/hangs enough
+    # that Render's edge returns its own generic 502 HTML page instead of
+    # a JSON error from this app.
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     envVars:
+      - key: DATABASE_URL
+        sync: false
+        # Required — MySQL. Prisma will fail to connect and the server
+        # will exit if this isn't a real, reachable MySQL connection
+        # string. Render's own free tier doesn't include a persistent
+        # free MySQL/Postgres; a free external MySQL (e.g. Aiven,
+        # PlanetScale, Railway) works fine here.
+      - key: REDIS_URL
+        sync: false
+        # Optional. Only needed for the webhooks/notifications features
+        # (BullMQ queues). Core verification endpoints (/verify-cbe,
+        # /verify-telebirr, /verify, etc.) work fine without it — leave
+        # unset if you don't need webhooks, the server now degrades
+        # gracefully instead of refusing to boot.
+      - key: MISTRAL_API_KEY
+        sync: false
+        # Optional. Only needed for POST /verify-image (receipt-screenshot
+        # OCR). Leave unset if you're only calling the reference-based
+        # /verify-* endpoints.
+      - key: ADMIN_SECRET
+        sync: false
+      - key: DASHBOARD_SECRET
+        sync: false
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL

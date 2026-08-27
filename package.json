@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --watch src --exec ts-node src/index.ts",
+    "dev": "prisma generate && nodemon --watch src --exec ts-node src/index.ts",
     "build": "prisma generate && tsc",
     "test": "pnpm build && node --test dist/tests/statusMonitorSignature.test.js dist/tests/statusProbeService.test.js",
     "start": "node dist/index.js",
@@ -12,7 +12,8 @@
     "migrate-keys": "ts-node src/utils/migrate-keys.ts",
     "migrate-user-model": "ts-node src/utils/migrateToUserModel.ts",
     "migrate-webhook-ownership": "ts-node src/utils/migrateWebhookOwnership.ts",
-    "migrate-remove-wildcard": "ts-node src/utils/migrateRemoveWildcard.ts"
+    "migrate-remove-wildcard": "ts-node src/utils/migrateRemoveWildcard.ts",
+    "seed-local-dev": "ts-node src/utils/seedLocalDev.ts"
   },
   "keywords": [],
   "author": "Leul Zenebe",

@@ -103,7 +103,21 @@ export async function verifyCBELegacy(
                 }
             });
 
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            try {
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            } catch (gotoErr: any) {
+                // CBE's legacy URL serves a PDF directly. Chrome treats that as a
+                // file download rather than a page navigation and aborts the
+                // navigation itself with net::ERR_ABORTED — this is expected
+                // browser behavior, not a real failure. The `response` listener
+                // above already captures detectedPdfUrl before this abort fires,
+                // so swallow only this specific error and keep going; anything
+                // else (real network/timeout errors) should still fail loudly.
+                if (!/ERR_ABORTED/.test(String(gotoErr?.message))) {
+                    throw gotoErr;
+                }
+                logger.info('ℹ️ Navigation aborted for direct PDF download (expected), continuing.');
+            }
             await new Promise(res => setTimeout(res, 6000));
             await browser.close();
 
